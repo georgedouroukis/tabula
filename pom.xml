@@ -1,0 +1,44 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>eu.linkedbusiness</groupId>
+  <artifactId>tabula</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>tabula</name>
+  
+  <repositories>
+	  <repository>
+		  <id>com.e-iceblue</id>
+		  <name>e-iceblue</name>
+		  <url>https://repo.e-iceblue.com/nexus/content/groups/public/</url>
+	  </repository>
+  </repositories>
+  
+  <dependencies>
+	  <!-- https://mvnrepository.com/artifact/technology.tabula/tabula -->
+		<dependency>
+		   <groupId>technology.tabula</groupId>
+		   <artifactId>tabula</artifactId>
+		   <version>1.0.5</version> 
+		</dependency>
+		
+		<dependency>
+	        <groupId>e-iceblue</groupId>
+	        <artifactId>spire.pdf</artifactId>
+	        <version>9.12.0</version>
+	    </dependency>
+
+
+  </dependencies>
+  <build>
+	  <plugins>
+		  <plugin>
+			  <groupId>org.apache.maven.plugins</groupId>
+			  <artifactId>maven-compiler-plugin</artifactId>
+			  <configuration>
+			    <source>1.8</source>
+			    <target>1.8</target>
+  				</configuration>
+			</plugin>
+	  </plugins>
+  </build>
+</project>
