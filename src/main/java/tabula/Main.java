@@ -4,14 +4,20 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.apache.commons.cli.ParseException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
+import technology.tabula.CommandLineApp;
 import technology.tabula.ObjectExtractor;
 import technology.tabula.Page;
 import technology.tabula.PageIterator;
@@ -28,14 +34,18 @@ public class Main {
 	public static final String ANSI_YELLOW = "\u001B[33m";
 	public static final String ANSI_CYAN = "\u001B[36m";
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, ParseException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, InstantiationException, IllegalArgumentException, ClassNotFoundException {
 
-		File initialFile = new File("c:\\Users\\George\\Desktop\\pdfs - Copy\\__uploads_01_7928101000_aa_2318639s.pdf");
+		File initialFile = new File("c:\\Users\\George\\Desktop\\p\\aa_2458990s.pdf");
 	    InputStream in = new FileInputStream(initialFile);
+	    
+	   
 	    
 		try (PDDocument document = PDDocument.load(in)) {
 			
 			BasicExtractionAlgorithm sea = new BasicExtractionAlgorithm();
+			
+			
 		    PageIterator pageIterator = new ObjectExtractor(document).extract();
 		    int k=1;
 		    while (pageIterator.hasNext()) {
@@ -43,8 +53,45 @@ public class Main {
 		        Page page = pageIterator.next();
 		        
 		        System.out.println(ANSI_YELLOW+"Page: "+k+ANSI_RESET);
+		        List<Table> pageTables =null;
+		        try {
+		        	
+		        	
+		        	
+		        	
+		        	
+		        	
+		        	Class<?> privateInnerClass = Class.forName("technology.tabula.CommandLineApp$TableExtractor");
+			        
+		        	Constructor<?> constructor = privateInnerClass.getDeclaredConstructor();
+		        	constructor.setAccessible(true);
+			        Object tableExtractorConstructor = constructor.newInstance();
+			        
+			        Field guessField  = privateInnerClass.getDeclaredField("guess");
+			        Field methodField  = privateInnerClass.getDeclaredField("method");
+			        guessField.setAccessible(true);
+			        methodField.setAccessible(true);
+			        
+//			        Class<?> privateEnumClass = Class.forName("technology.tabula.CommandLineApp$TableExtractor$ExtractionMethod");
+			        
+			        
+//			        Field enumField = privateEnumClass.getDeclaredField("DECIDE");
+//			        Object enumConstantValue = enumField.get(null);
+
+			        guessField.set(tableExtractorConstructor,true);
+//			        methodField.set(tableExtractorConstructor, enumConstantValue);
+			        
+			        Method extractTables = privateInnerClass.getDeclaredMethod("extractTables", Page.class);
+			        extractTables.setAccessible(true);
+
+			        pageTables = (List<Table>) extractTables.invoke(tableExtractorConstructor, page);
+			        System.out.println(pageTables.size()+ " tables----------------------");
+		        }
+		        catch (Exception e) {
+					e.printStackTrace();
+				}
 		        
-		        List<Table> pageTables = sea.extract(page);
+//		        pageTables = sea.extract(page);
 		        // iterate over the tables of the page
 		        int j=1;
 		        for(Table tableT: pageTables) {
