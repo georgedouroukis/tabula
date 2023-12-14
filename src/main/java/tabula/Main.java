@@ -4,16 +4,25 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 
 import technology.tabula.ObjectExtractor;
 import technology.tabula.Page;
@@ -38,42 +47,117 @@ public class Main {
 
 		
 		String[] extentions = {"pdf"};
-		Iterator<File> it = FileUtils.iterateFiles(new File("C:\\Users\\George\\Desktop\\p"), extentions, false);
+		String basePath = "C:\\Users\\George\\Desktop\\pdf";
+		Iterator<File> it = FileUtils.iterateFiles(new File(basePath), extentions, false);
+		
+		File extractedFolder = new File(basePath+"\\extracted");
+	    if (extractedFolder.exists())
+	    	throw new IOException("\"extracted\" folder already exists");
+	    else
+	    	extractedFolder.mkdirs();
 		
         while(it.hasNext()){
         	
             File pdfFile = it.next();
         	System.out.println(pdfFile.getName());
         	InputStream in = new FileInputStream(pdfFile);
-        	
-        	List<Integer> pages = new ArrayList<>();
-        	
+
         	try (PDDocument document = PDDocument.load(in)) {
-    			
-    			BasicExtractionAlgorithm sea = new BasicExtractionAlgorithm();
+        		long start = System.currentTimeMillis();
     			NurminenDetectionAlgorithm nurminenAlgorithm = new NurminenDetectionAlgorithm();
     			SpreadsheetDetectionAlgorithm spreadAlgorithm = new SpreadsheetDetectionAlgorithm();
-    		    PageIterator pageIterator = new ObjectExtractor(document).extract();
-    		    
-    		    
-    		    
-    		    int k=1;
-    		    while (pageIterator.hasNext()) {
+    			
+    			try (ObjectExtractor oe = new ObjectExtractor(document)){
+	    		    PageIterator pageIterator = oe.extract();
+	    		    
+	    		    List<Integer> pagesWithTables = new ArrayList<>(); 
+	    		    
+	    		    int i=1;
+	    		    while (pageIterator.hasNext()) {
+	
+	    		        Page page = pageIterator.next();
+	    		        
+	    		        System.out.println(ANSI_YELLOW+"Page: "+ (i) +ANSI_RESET);
+	    		        
+	    		        
+	    		        List<Rectangle> tablesSpread = spreadAlgorithm.detect(page);
+	    		        
+	    		        if(!tablesSpread.isEmpty())
+	    		        	pagesWithTables.add(i);
+	    		        else {
+	    		        	List<Rectangle> tablesNurm = nurminenAlgorithm.detect(page);
+	    		        	if (!tablesNurm.isEmpty())
+	    		        		pagesWithTables.add(i);
+	    		        	else {}
+	    		        }
+	    		        i++;
+	    		    }
+	    		    long finish = System.currentTimeMillis();
+	    		    long timeElapsed = finish - start;
+	
+	    		    Map<Integer, Boolean> map = convertArrayListToSortedMap(pagesWithTables, document.getNumberOfPages());
 
-    		        Page page = pageIterator.next();
-    		        
-    		        System.out.println(ANSI_YELLOW+"Page: "+ k +ANSI_RESET);
-    		        
-    		        List<Rectangle> tablesNurm = nurminenAlgorithm.detect(page);
-    		        List<Rectangle> tablesSpread = spreadAlgorithm.detect(page);
-    		        
-    		        if(tablesNurm.size()!=0&&tablesSpread.size()!=0)
-    		        	pages.add(k);
-    		        
-    		        k++;
-    		    }
-    		}
-        	pages.forEach(p->System.out.println(p));
+	    		    System.out.println("time elapsed: "+ timeElapsed/(double)1000 + " s");
+	    		    
+	    		    map.forEach((k,v) -> System.out.println("pageNumber: "+(k)+" hasTable: "+v));
+	    		    
+	    		    String extractedPdfPath = basePath+"\\extracted\\"+FilenameUtils.getBaseName(pdfFile.getName())+"_extracted.pdf";
+	    		    File extractedFile = new File(extractedPdfPath);
+	    		    
+	    		    System.out.println(extractedFile.getPath());
+	    		    PDDocument extracted = new PDDocument();
+	    		    
+	    		    
+	    		    map.forEach((pageNumber,hasTables) -> {
+	    		    	if(hasTables) {
+	    		    		extracted.addPage(document.getPage(pageNumber-1));
+	    		    	}
+	    		    	else {
+	    		    		PDRectangle dimensions = document.getPage(pageNumber-1).getMediaBox();
+	    		    		extracted.addPage(new PDPage(dimensions));
+						}
+	    		    });
+	    		    
+	    		    extracted.save(extractedFile);
+	    		    extracted.close();
+	    		    
+	    		    
+	    		    
+	    		    
+	    		    System.out.println(document.getDocumentInformation().getCOSObject());
+    			}
+    			
+    			
+    			 
+	        }
         }
+	}
+	
+	public static Map<Integer, Boolean> convertArrayListToSortedMap(List<Integer> arrayList, int fixedSize) {
+        Map<Integer, Boolean> resultMap = new HashMap<>();
+
+        // Initialize the map with all values set to false
+        for (int i = 1; i <= fixedSize; i++) {
+            resultMap.put(i, false);
+        }
+
+        // Update the values to true if they exist in the ArrayList
+        for (Integer key : arrayList) {
+            if (key >= 1 && key <= fixedSize) {
+                resultMap.put(key, true);
+            }
+        }
+
+        return new TreeMap<>(resultMap);
+    }
+	
+	public static boolean isEmpty(Path path) throws IOException {
+	    if (Files.isDirectory(path)) {
+	        try (DirectoryStream<Path> directory = Files.newDirectoryStream(path)) {
+	            return !directory.iterator().hasNext();
+	        }
+	    }
+
+	    return false;
 	}
 }
