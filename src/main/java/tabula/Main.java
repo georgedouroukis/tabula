@@ -79,17 +79,26 @@ public class Main {
 	    		        
 	    		        System.out.println(ANSI_YELLOW+"Page: "+ (i) +ANSI_RESET);
 	    		        
+						if (!page.hasText()) {
+							pagesWithTables.add(i);
+						} else {
+
+							List<Rectangle> tablesSpread = spreadAlgorithm.detect(page);
+
+							if (!tablesSpread.isEmpty()) {
+								pagesWithTables.add(i);
+							}
+
+							else {
+								List<Rectangle> tablesNurm = nurminenAlgorithm.detect(page);
+								if (!tablesNurm.isEmpty())
+									pagesWithTables.add(i);
+								else {
+								}
+							}
+						}
 	    		        
-	    		        List<Rectangle> tablesSpread = spreadAlgorithm.detect(page);
 	    		        
-	    		        if(!tablesSpread.isEmpty())
-	    		        	pagesWithTables.add(i);
-	    		        else {
-	    		        	List<Rectangle> tablesNurm = nurminenAlgorithm.detect(page);
-	    		        	if (!tablesNurm.isEmpty())
-	    		        		pagesWithTables.add(i);
-	    		        	else {}
-	    		        }
 	    		        i++;
 	    		    }
 	    		    long finish = System.currentTimeMillis();
