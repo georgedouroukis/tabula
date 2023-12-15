@@ -8,15 +8,11 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -28,11 +24,8 @@ import technology.tabula.ObjectExtractor;
 import technology.tabula.Page;
 import technology.tabula.PageIterator;
 import technology.tabula.Rectangle;
-import technology.tabula.RectangularTextContainer;
-import technology.tabula.Table;
 import technology.tabula.detectors.NurminenDetectionAlgorithm;
 import technology.tabula.detectors.SpreadsheetDetectionAlgorithm;
-import technology.tabula.extractors.*;
 
 
 
@@ -79,8 +72,16 @@ public class Main {
 	    		        
 	    		        System.out.println(ANSI_YELLOW+"Page: "+ (i) +ANSI_RESET);
 	    		        
-						if (!page.hasText()) {
+	    		      //discard empty pages
+	    		        if(!document.getPage(i-1).hasContents()) {
+	    		        	i++;
+	    		        	continue;
+	    		        }
+	    		        
+	    		        // add scanned pages, !page.hasText() produces the same result but is deprecated
+						if (page.getText().isEmpty()) {
 							pagesWithTables.add(i);
+							System.out.println(ANSI_GREEN+"Page: "+ i + " is scanned!!!!!!" +ANSI_RESET);
 						} else {
 
 							List<Rectangle> tablesSpread = spreadAlgorithm.detect(page);
