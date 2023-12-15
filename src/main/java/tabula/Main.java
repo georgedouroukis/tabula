@@ -48,6 +48,9 @@ public class Main {
 	    	throw new IOException("\"extracted\" folder already exists");
 	    else
 	    	extractedFolder.mkdirs();
+	    
+	    NurminenDetectionAlgorithm nurminenAlgorithm = new NurminenDetectionAlgorithm();
+		SpreadsheetDetectionAlgorithm spreadAlgorithm = new SpreadsheetDetectionAlgorithm();
 		
         while(it.hasNext()){
         	
@@ -57,8 +60,7 @@ public class Main {
 
         	try (PDDocument document = PDDocument.load(in)) {
         		long start = System.currentTimeMillis();
-    			NurminenDetectionAlgorithm nurminenAlgorithm = new NurminenDetectionAlgorithm();
-    			SpreadsheetDetectionAlgorithm spreadAlgorithm = new SpreadsheetDetectionAlgorithm();
+    			
     			
     			try (ObjectExtractor oe = new ObjectExtractor(document)){
 	    		    PageIterator pageIterator = oe.extract();
@@ -79,68 +81,55 @@ public class Main {
 	    		        }
 	    		        
 	    		        // add scanned pages, !page.hasText() produces the same result but is deprecated
-						if (page.getText().isEmpty()) {
-							pagesWithTables.add(i);
-							System.out.println(ANSI_GREEN+"Page: "+ i + " is scanned!!!!!!" +ANSI_RESET);
-						} else {
-
-							List<Rectangle> tablesSpread = spreadAlgorithm.detect(page);
-
-							if (!tablesSpread.isEmpty()) {
-								pagesWithTables.add(i);
-							}
-
-							else {
-								List<Rectangle> tablesNurm = nurminenAlgorithm.detect(page);
-								if (!tablesNurm.isEmpty())
-									pagesWithTables.add(i);
-								else {
-								}
-							}
-						}
+	    		        if (page.getText().isEmpty()) {
+	    		            pagesWithTables.add(i);
+	    		            System.out.println(ANSI_GREEN + "Page: " + i + " is scanned!!!!!!" + ANSI_RESET);
+	    		        } 
 	    		        
-	    		        
+	    		        // spreadAlgorithm is evaluated first because it gives the best results and is faster. the other has some edge cases
+	    		        else if (!spreadAlgorithm.detect(page).isEmpty() || !nurminenAlgorithm.detect(page).isEmpty()) {
+	    		            pagesWithTables.add(i);
+	    		        }
 	    		        i++;
 	    		    }
 	    		    long finish = System.currentTimeMillis();
 	    		    long timeElapsed = finish - start;
+	    		    
+	    		    System.out.println("time elapsed for file: "+ timeElapsed/(double)1000 + " s");
 	
 	    		    Map<Integer, Boolean> map = convertArrayListToSortedMap(pagesWithTables, document.getNumberOfPages());
 
-	    		    System.out.println("time elapsed: "+ timeElapsed/(double)1000 + " s");
-	    		    
 	    		    map.forEach((k,v) -> System.out.println("pageNumber: "+(k)+" hasTable: "+v));
 	    		    
 	    		    String extractedPdfPath = basePath+"\\extracted\\"+FilenameUtils.getBaseName(pdfFile.getName())+"_extracted.pdf";
-	    		    File extractedFile = new File(extractedPdfPath);
 	    		    
-	    		    System.out.println(extractedFile.getPath());
-	    		    PDDocument extracted = new PDDocument();
-	    		    
-	    		    
-	    		    map.forEach((pageNumber,hasTables) -> {
-	    		    	if(hasTables) {
-	    		    		extracted.addPage(document.getPage(pageNumber-1));
-	    		    	}
-	    		    	else {
-	    		    		PDRectangle dimensions = document.getPage(pageNumber-1).getMediaBox();
-	    		    		extracted.addPage(new PDPage(dimensions));
-						}
-	    		    });
-	    		    
-	    		    extracted.save(extractedFile);
-	    		    extracted.close();
-	    		    
-	    		    
-	    		    
-	    		    
-	    		    System.out.println(document.getDocumentInformation().getCOSObject());
+	    		    createPDFWithTablesAndScannedPages(document, map, extractedPdfPath);
+
+    			
     			}
-    			
-    			
-    			 
 	        }
         }
+	}
+
+	public static void createPDFWithTablesAndScannedPages(PDDocument document, Map<Integer, Boolean> map,
+			String extractedPdfPath) throws IOException {
+		File extractedFile = new File(extractedPdfPath);
+		
+		System.out.println(extractedFile.getPath());
+		
+		try (PDDocument extracted = new PDDocument()) {
+
+			map.forEach((pageNumber, hasTables) -> {
+				if (hasTables) {
+					extracted.addPage(document.getPage(pageNumber - 1));
+				} else {
+					PDRectangle dimensions = document.getPage(pageNumber - 1).getMediaBox();
+					extracted.addPage(new PDPage(dimensions));
+				}
+			});
+
+			extracted.save(extractedFile);
+		}
 	}
 	
 	public static Map<Integer, Boolean> convertArrayListToSortedMap(List<Integer> arrayList, int fixedSize) {
