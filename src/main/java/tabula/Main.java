@@ -17,6 +17,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.pdfbox.multipdf.Overlay;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -38,6 +39,8 @@ public class Main {
 	public static final String ANSI_CYAN = "\u001B[36m";
 
 	public static void main(String[] args) throws IOException {
+		
+
 
 		long start = System.currentTimeMillis();
 		
@@ -71,7 +74,8 @@ public class Main {
 				String extractedPdfPath = basePath + "\\extracted\\" + FilenameUtils.getBaseName(pdfFile.getName())
 						+ "_extracted.pdf";
 
-				createExtractedPDF(document, map, extractedPdfPath);
+//				createExtractedPDF(document, map, extractedPdfPath);
+				createPDFWithOverlay(document, map, extractedPdfPath);
 
 			}
 		}
@@ -160,6 +164,45 @@ public class Main {
 			extracted.save(extractedFile);
 		}
 	}
+	
+	
+	/**
+	 * Takes a {@link org.apache.pdfbox.pdmodel.PDDocument PDDocument}, 
+	 * a map with 1-based page indexes keys and boolean values, and a path
+	 * and creates a new pdf with the excluded pages crossed with a watermark in the provided path  
+	 * @param document
+	 * @param map
+	 * @param extractedPdfPath
+	 * @throws IOException
+	 */
+	public static void createPDFWithOverlay(PDDocument document, Map<Integer, Boolean> map,
+			String extractedPdfPath) throws IOException{
+		
+		
+		Map<Integer, String> overlayGuide = mapToOverlayGuide(map);
+	   
+		Overlay overlay = new Overlay();
+		
+		overlay.setInputPDF(document);
+		overlay.overlay(overlayGuide).save(extractedPdfPath);
+		overlay.close();
+	}
+	
+	
+	public static Map<Integer, String> mapToOverlayGuide(Map<Integer, Boolean> map) {
+		
+		Map<Integer, String> overlayGuide = new HashMap<>();
+		String watermarkPath = "watermark.pdf";
+		
+		for(Map.Entry<Integer, Boolean> entry : map.entrySet()) {
+			if (!entry.getValue().booleanValue()) {
+				overlayGuide.put(entry.getKey(), watermarkPath);
+			}
+		}
+		
+		return overlayGuide;
+	}
+	
 	
 	/**
 	 * Takes a list of 1-based pages indexes, 
