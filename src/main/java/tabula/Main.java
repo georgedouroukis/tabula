@@ -56,13 +56,19 @@ public class Main {
 
 		NurminenDetectionAlgorithm nurminenAlgorithm = new NurminenDetectionAlgorithm();
 		SpreadsheetDetectionAlgorithm spreadAlgorithm = new SpreadsheetDetectionAlgorithm();
-
+		int pageCounter = 0;
 		while (it.hasNext()) {
 
+			
 			File pdfFile = it.next();
+			
+			if (pdfFile.getName().charAt(0)=='$') {
+				continue;
+			}
+			
 			System.out.println(pdfFile.getName());
 			InputStream in = new FileInputStream(pdfFile);
-
+			
 			try (PDDocument document = PDDocument.load(in)) {
 
 				List<Integer> pagesWithTables = findTablesAndScannedPages(document, spreadAlgorithm, nurminenAlgorithm);
@@ -74,14 +80,16 @@ public class Main {
 				String extractedPdfPath = basePath + "\\extracted\\" + FilenameUtils.getBaseName(pdfFile.getName())
 						+ "_extracted.pdf";
 
-//				createExtractedPDF(document, map, extractedPdfPath);
-				createPDFWithOverlay(document, map, extractedPdfPath);
+				pageCounter += createPDFWithoutEmptyPages(document, map, extractedPdfPath);
+//				createPDFWithOverlay(document, map, extractedPdfPath);
 
 			}
 		}
+		
 		long finish = System.currentTimeMillis();
 		long timeElapsed = finish - start;
 		System.out.println("time elapsed for file: " + timeElapsed / (double) 1000 + " s");
+		System.out.println("total pages found: " + pageCounter);
 	}
 
 	
@@ -144,7 +152,7 @@ public class Main {
 	 * @param extractedPdfPath
 	 * @throws IOException
 	 */
-	public static void createExtractedPDF(PDDocument document, Map<Integer, Boolean> map,
+	public static void createPDFWithEmptyPages(PDDocument document, Map<Integer, Boolean> map,
 			String extractedPdfPath) throws IOException {
 		File extractedFile = new File(extractedPdfPath);
 		
@@ -163,6 +171,28 @@ public class Main {
 
 			extracted.save(extractedFile);
 		}
+	}
+	
+	public static int createPDFWithoutEmptyPages(PDDocument document, Map<Integer, Boolean> map,
+			String extractedPdfPath) throws IOException {
+		File extractedFile = new File(extractedPdfPath);
+		
+		System.out.println(extractedFile.getPath());
+		int pageNumbers= 0;
+		try (PDDocument extracted = new PDDocument()) {
+
+			map.forEach((pageNumber, hasTables) -> {
+				if (hasTables.booleanValue()) {
+					extracted.addPage(document.getPage(pageNumber - 1));
+				} else {
+//					PDRectangle dimensions = document.getPage(pageNumber - 1).getMediaBox();
+//					extracted.addPage(new PDPage(dimensions));
+				}
+			});
+			pageNumbers = extracted.getNumberOfPages();
+			extracted.save(extractedFile);
+		}
+		return document.getNumberOfPages();
 	}
 	
 	
